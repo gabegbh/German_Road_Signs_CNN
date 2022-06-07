@@ -1,21 +1,24 @@
 import keras,os
 from keras.models import Sequential
-from keras.layers import Dense, Conv2D, MaxPool2D , Flatten
+from keras.layers import Dense, Conv2D, MaxPool2D , Flatten, Dropout
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.optimizers import Adam
+from keras.optimizers import Adam, RMSprop
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 def create_network():
     network = Sequential()
-    network.add(Conv2D(input_shape=(32,32,3),filters=24,kernel_size=(3,3), activation="relu"))
-    network.add(Conv2D(filters=24,kernel_size=(3,3), activation="relu"))
+    
+    network.add(Conv2D(input_shape=(64,64,3),filters=32,kernel_size=(3,3), padding='same', activation="relu"))
+    network.add(Conv2D(filters=32,kernel_size=(3,3), activation="relu"))
     network.add(MaxPool2D(pool_size=(2,2),strides=(2,2)))
-    network.add(Conv2D(filters=48, kernel_size=(3,3),  activation="relu"))
-    network.add(Conv2D(filters=48, kernel_size=(3,3),  activation="relu"))
+    network.add(Dropout(0.2))
+    network.add(Conv2D(filters=64, kernel_size=(3,3), padding='same', activation="relu"))
+    network.add(Conv2D(filters=64, kernel_size=(3,3),  activation="relu"))
     network.add(MaxPool2D(pool_size=(2,2),strides=(2,2)))
+    network.add(Dropout(0.25))
     # network.add(Conv2D(filters=256, kernel_size=(3,3),  activation="relu"))
     # network.add(Conv2D(filters=256, kernel_size=(3,3),  activation="relu"))
     # network.add(Conv2D(filters=256, kernel_size=(3,3),  activation="relu"))
@@ -29,8 +32,10 @@ def create_network():
     # network.add(Conv2D(filters=512, kernel_size=(3,3),  activation="relu"))
     # network.add(MaxPool2D(pool_size=(2,2),strides=(2,2)))
     network.add(Flatten())
-    network.add(Dense(120, activation='relu'))
-    network.add(Dense(84, activation='relu'))
+    network.add(Dense(392, activation='relu'))
+    network.add(Dropout(0.4))
+    network.add(Dense(80, activation='relu'))
+    network.add(Dropout(0.5))
     network.add(Dense(43, activation='softmax'))
     
     return network
@@ -53,15 +58,16 @@ def display_metrics(history):
     plt.show()
 
 if __name__ == '__main__':
-    training_data_gen = ImageDataGenerator(validation_split=0.2)
-    training_data = training_data_gen.flow_from_directory(directory="GTSRB/Final_Training/Images",target_size=(32,32), subset='training')
-    validation_data = training_data_gen.flow_from_directory(directory="GTSRB/Final_Training/Images",target_size=(32,32), subset='validation')
+    training_data_gen = ImageDataGenerator(validation_split=0.1)
+    training_data = training_data_gen.flow_from_directory(directory="GTSRB/Final_Training/Train",target_size=(64,64), subset='training')
+    validation_data = training_data_gen.flow_from_directory(directory="GTSRB/Final_Training/Train",target_size=(64,64), subset='validation')
 
-    opt = Adam(lr=0.0005)
+    opt = Adam(lr=0.00007)
+    # opt = RMSprop(lr=0.0008, decay=1e-6)
 
     model = create_network()
     model.compile(optimizer=opt, loss=keras.losses.CategoricalCrossentropy(), metrics=['accuracy'])
     history = model.fit(x=training_data, 
-                        epochs=20, 
+                        epochs=15, 
                         validation_data=validation_data)
     display_metrics(history)
